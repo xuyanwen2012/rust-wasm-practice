@@ -44,14 +44,28 @@ impl Universe {
         }
         count
     }
+
+    /// Get the dead and alive values of the entire universe.
+    pub fn get_cells(&self) -> &FixedBitSet {
+        &self.cells
+    }
+
+    /// Set cells to be alive in a universe by passing the row and column of each cell as an array.
+    pub fn set_cells(&mut self, cells: &[(u32, u32)]) {
+        for (rol, col) in cells.iter().cloned() {
+            let index = self.get_index(rol, col);
+            self.cells.put(index);
+        }
+    }
 }
 
 #[wasm_bindgen]
 impl Universe {
     pub fn new() -> Self {
-        let width = 64;
-        let height = 64;
+        Self::with_dimension(64, 64)
+    }
 
+    pub fn with_dimension(width: u32, height: u32) -> Self {
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
 
