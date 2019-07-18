@@ -1,12 +1,11 @@
 mod utils;
 
 extern crate fixedbitset;
-use fixedbitset::FixedBitSet;
+extern crate web_sys;
 
+use fixedbitset::FixedBitSet;
 use wasm_bindgen::prelude::*;
 
-// When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
-// allocator.
 #[cfg(feature = "wee_alloc")]
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
@@ -16,11 +15,37 @@ extern "C" {
     fn alert(s: &str);
 }
 
+macro_rules! log {
+    ( $( $t:tt )* ) => {
+        web_sys::console::log_1(&format!( $( $t )* ).into());
+    }
+}
+
 #[wasm_bindgen]
 pub struct Universe {
     width: u32,
     height: u32,
     cells: FixedBitSet,
+}
+
+trait Builder {
+    fn with(self) -> Self;
+    fn build(self) -> Universe;
+}
+
+struct UniverseBuilder {
+    built: bool,
+}
+
+impl Builder for UniverseBuilder {
+    #[inline]
+    fn with(self) -> Self {
+        self
+    }
+
+    fn build(self) -> Universe {
+        unimplemented!()
+    }
 }
 
 impl Universe {
@@ -62,10 +87,12 @@ impl Universe {
 #[wasm_bindgen]
 impl Universe {
     pub fn new() -> Self {
+        utils::set_panic_hook();
         Self::with_dimension(64, 64)
     }
 
     pub fn with_dimension(width: u32, height: u32) -> Self {
+        utils::set_panic_hook();
         let size = (width * height) as usize;
         let mut cells = FixedBitSet::with_capacity(size);
 
@@ -101,6 +128,14 @@ impl Universe {
                 let cell = self.cells[index];
                 let live_neighbors = self.live_neighbor_count(row, col);
 
+                //                log!(
+                //                    "Cell [{}, {}] is initially {:?} and has {} living neighbors",
+                //                    row,
+                //                    col,
+                //                    cell,
+                //                    live_neighbors
+                //                );
+
                 next.set(
                     index,
                     match (cell, live_neighbors) {
@@ -111,9 +146,17 @@ impl Universe {
                         (otherwise, _) => otherwise,
                     },
                 );
+
+                //                log!("    it becomes {:?}", next.contains(index));
             }
         }
 
         self.cells = next;
+    }
+
+    pub fn toggle_cell(&mut self, row: u32, col: u32) {
+        let index = self.get_index(row, col);
+        let bit = self.cells.contains(index);
+        self.cells.set(index, !bit);
     }
 }
